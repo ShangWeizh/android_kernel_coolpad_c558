@@ -1153,6 +1153,10 @@ LCM_DRIVER *lcm_driver_list[] = {
 #if defined(ES6311_ANX6585_ZIGZAG_WXGA)
 	&es6311_anx6585_zigzag_wxga_lcm_drv,
 #endif
+
+#if defined(ST7796_HVGA_QF3902_PRJ_C558_BAOXU)
+	&st7796_hvga_qf3902_prj_c558_baoxu_lcm_drv,
+#endif
 };
 
 unsigned char lcm_name_list[][128] = {

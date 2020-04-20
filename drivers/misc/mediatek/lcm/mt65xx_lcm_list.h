@@ -301,6 +301,7 @@ extern LCM_DRIVER st7789h2_dbi_c_3wire_lcm_drv;
 extern LCM_DRIVER ssd2858_kd097d05_qxga_dsi_vdo_lcm_drv;
 extern LCM_DRIVER jd9365_pbt101wxb40i072_wxga_boe_lcm_drv;
 extern LCM_DRIVER es6311_anx6585_zigzag_wxga_lcm_drv;
+extern LCM_DRIVER st7796_hvga_qf3902_prj_c558_baoxu_lcm_drv;
 #ifdef BUILD_LK
 extern void mdelay(unsigned long msec);
 #endif
