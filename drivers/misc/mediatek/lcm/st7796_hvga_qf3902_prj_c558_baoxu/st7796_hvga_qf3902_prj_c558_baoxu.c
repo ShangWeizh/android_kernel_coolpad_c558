@@ -170,6 +170,10 @@ static void lcm_resume(void)
 
 static unsigned int lcm_compare_id(void)
 {
+
+	return 1;
+
+#if 0
 	int res;
 	int data[4] = {0, 0, 0, 0};
 	int rawdata = 0;
@@ -193,6 +197,7 @@ static unsigned int lcm_compare_id(void)
 	}
 
 	return 0;
+#endif
 }
 
 LCM_DRIVER st7796_hvga_qf3902_prj_c558_baoxu_lcm_drv =
