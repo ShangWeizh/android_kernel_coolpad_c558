@@ -800,6 +800,16 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 	unsigned int BacklightLevelSupport =
 	    Cust_GetBacklightLevelSupport_byPWM();
 
+	if (!strcmp(cust->name, "red")) {
+		return 1;
+	}
+	if (!strcmp(cust->name, "green")) {
+		return 1;
+	}
+	if (!strcmp(cust->name, "keyboard-backlight")) {
+		return 1;
+	}
+
 	switch (cust->mode) {
 
 	case MT65XX_LED_MODE_PWM:
