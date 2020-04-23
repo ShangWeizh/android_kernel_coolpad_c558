@@ -13,6 +13,7 @@ Description   : Driver for Silead I2C touchscreen.
 #define CONFIG_OF_TOUCH
 #include "tpd.h"
 #include <linux/interrupt.h>
+#include "mtk_boot_common.h"
 #ifdef CONFIG_OF_TOUCH
 #include <linux/of_irq.h>
 #else
@@ -21,7 +22,6 @@ Description   : Driver for Silead I2C touchscreen.
 #include <linux/i2c.h>
 #include <linux/sched.h>
 #include <linux/kthread.h>
-#include <linux/rtpm_prio.h>
 #include <linux/wait.h>
 #include <linux/delay.h>
 #include <linux/time.h>
@@ -30,7 +30,6 @@ Description   : Driver for Silead I2C touchscreen.
 #endif
 
 #ifdef CONFIG_OF_TOUCH
-#include "mt_boot_common.h"
 #include "upmu_common.h"
 #else
 #include <mach/mt_pm_ldo.h>
@@ -116,88 +115,73 @@ extern void gsl_FunIICRead(unsigned int (*fun) (unsigned int *, unsigned int, un
 extern void gsl_GestureExternInt(unsigned int *model, int len);
 unsigned int gsl_model_extern[] = {
 	0x10, 0x56,
-	0x08000f00, 0x0f0c2f1f, 0x12125040, 0x13127060, 0x16149181, 0x1a18b1a1, 0x1c1bd2c2, 0x201df2e2,
-	0x3324f7fe, 0x4f41e7ef, 0x6d5ed8df, 0x8a7bc8d0, 0xa698b7c0, 0xc3b4a6af, 0xe0d2959d, 0xffee848d,
+	0x08000F00, 0x0F0C2F1F, 0x12125040, 0x13127060, 0x16149181, 0x1A18B1A1, 0x1C1BD2C2, 0x201DF2E2,
+	0x3324F7FE, 0x4F41E7EF, 0x6D5ED8DF, 0x8A7BC8D0, 0xA698B7C0, 0xC3B4A6AF, 0xE0D2959D, 0xFFEE848D,
 	0x10, 0x57,
-	0x00062610, 0x03015c41, 0x06049277, 0x0f09c8ad, 0x2918f7e0, 0x5142e4fb, 0x685eb2cb, 0x77707c97,
-	0x857d9177, 0x978dc5ab, 0xb4a1f3de, 0xdbcbd5ec, 0xebe4a2bd, 0xf4f06c87, 0xfaf73651, 0xfffd001b,
-
+	0x00062610, 0x03015C41, 0x06049277, 0x0F09C8AD, 0x2918F7E0, 0x5142E4FB, 0x685EB2CB, 0x77707C97,
+	0x857D9177, 0x978DC5AB, 0xB4A1F3DE, 0xDBCBD5EC, 0xEBE4A2BD, 0xF4F06C87, 0xFAF73651, 0xFFFD001B,
 	0x10, 0x49,
-	0x0e00f4ff, 0x2f1ee4ec, 0x4f3ed4dc, 0x6f5fc4cc, 0x8f7fb3bc, 0xae9ea3ab, 0xcebe949b, 0xf0df858d,
-	0xf0ff707a, 0xcfdf6268, 0xadbe525a, 0x8d9e434a, 0x6d7d353c, 0x4c5c262e, 0x2c3c151e, 0x0c3c000b,
+	0x0E00F4FF, 0x2F1EE4EC, 0x4F3ED4DC, 0x6F5FC4CC, 0x8F7FB3BC, 0xAE9EA3AB, 0xCEBE949B, 0xF0DF858D,
+	0xF0FF707A, 0xCFDF6268, 0xADBE525A, 0x8D9E434A, 0x6D7D353C, 0x4C5C262E, 0x2C3C151E, 0x0C3C000B,
 	0x10, 0x49,
-	0x775df6f9, 0xab91e6ef, 0xdac3cedb, 0xf9eda2b9, 0xfdff6d88, 0xf1f93a53, 0xcce21424, 0x9ab50209,
-	0x65800101, 0x354d1409, 0x0f1f3a25, 0x01056e53, 0x0100a288, 0x1407d3bc, 0x4128f1e4, 0x765bfffb,
-
+	0x775DF6F9, 0xAB91E6EF, 0xDAC3CEDB, 0xF9EDA2B9, 0xFDFF6D88, 0xF1F93A53, 0xCCE21424, 0x9AB50209,
+	0x65800101, 0x354D1409, 0x0F1F3A25, 0x01056E53, 0x0100A288, 0x1407D3BC, 0x4128F1E4, 0x765BFFFB,
 	0x10, 0x1041,
-	0xfdff859f, 0xe0f2566c, 0xbdcf2d41, 0x90a90f1d, 0x5a750106, 0x253f0400, 0x020d2b11, 0x10015c46,
-	0x3823806e, 0x664e9f91, 0x9a80b2ab, 0xd0b5bab8, 0xaac5bbbc, 0x7590bebb, 0x445bd3c4, 0x244fffe5,
+	0xFDFF859F, 0xE0F2566C, 0xBDCF2D41, 0x90A90F1D, 0x5A750106, 0x253F0400, 0x020D2B11, 0x10015C46,
+	0x3823806E, 0x664E9F91, 0x9A80B2AB, 0xD0B5BAB8, 0xAAC5BBBC, 0x7590BEBB, 0x445BD3C4, 0x244FFFE5,
 	0x10, 0x1042,
-	0xe5ff795e, 0xb0cb4f54, 0x7c96444a, 0x4e63293a, 0x223a0917, 0x39271601, 0x5c4a402c, 0x7a6c6e55,
-	0x837fa388, 0x8084d7bd, 0x5871fdef, 0x293febfd, 0x1019bcd5, 0x040987a1, 0x0101526d, 0x11271e38,
+	0xE5FF795E, 0xB0CB4F54, 0x7C96444A, 0x4E63293A, 0x223A0917, 0x39271601, 0x5C4A402C, 0x7A6C6E55,
+	0x837FA388, 0x8084D7BD, 0x5871FDEF, 0x293FEBFD, 0x1019BCD5, 0x040987A1, 0x0101526D, 0x11271E38,
 	0x10, 0x1044,
-	0x86867995, 0x8386415d, 0x687a1026, 0x324e0003, 0x03151d07, 0x04005539, 0x240e836f, 0x553ca293,
-	0x8c70b5ac, 0xc4a8bebb, 0xfce0bfbf, 0xcae6bfbf, 0x91adbfbf, 0x5975bdbe, 0x253dccbf, 0x0534ffe4,
+	0x86867995, 0x8386415D, 0x687A1026, 0x324E0003, 0x03151D07, 0x04005539, 0x240E836F, 0x553CA293,
+	0x8C70B5AC, 0xC4A8BEBB, 0xFCE0BFBF, 0xCAE6BFBF, 0x91ADBFBF, 0x5975BDBE, 0x253DCCBF, 0x0534FFE4,
 	0x10, 0x1041,
-	0x0007775b, 0x1004ae93, 0x3520dac6, 0x6b50f4e7, 0xa487fdfe, 0xdec1f3f9, 0xfdf8c7e3, 0xd7ee9dae,
-	0xa4be818f, 0x6f8a6672, 0x3552595d, 0x33185556, 0x6d505555, 0xa78a5053, 0xddc43a48, 0xdd05001d,
+	0x0007775B, 0x1004AE93, 0x3520DAC6, 0x6B50F4E7, 0xA487FDFE, 0xDEC1F3F9, 0xFDF8C7E3, 0xD7EE9DAE,
+	0xA4BE818F, 0x6F8A6672, 0x3552595D, 0x33185556, 0x6D505555, 0xA78A5053, 0xDDC43A48, 0xDD05001D,
 	0x10, 0x1042,
-	0x1a00d1d1, 0x4f34d6d3, 0x8369dfda, 0xb89eebe4, 0xecd2fef4, 0xd5edecf9, 0xb0bec6de, 0x99a597af,
-	0x8a8f637d, 0x87882e49, 0xa28c0214, 0xd4bc0c01, 0xece53b22, 0xfcf56f55, 0xfffea489, 0xf91ed9be,
+	0x1A00D1D1, 0x4F34D6D3, 0x8369DFDA, 0xB89EEBE4, 0xECD2FEF4, 0xD5EDECF9, 0xB0BEC6DE, 0x99A597AF,
+	0x8A8F637D, 0x87882E49, 0xA28C0214, 0xD4BC0C01, 0xECE53B22, 0xFCF56F55, 0xFFFEA489, 0xF91ED9BE,
 	0x10, 0x1044,
-	0x93958166, 0x9a94b79c, 0xb5a5e7d1, 0xe6cbfff8, 0xfefbd2ed, 0xeef79eb8, 0xcce07386, 0x9fb75562,
-	0x6b854049, 0x35503539, 0x02193331, 0x381d3535, 0x6f543736, 0xa58a3938, 0xdbc13239, 0xf409001b,
+	0x93958166, 0x9A94B79C, 0xB5A5E7D1, 0xE6CBFFF8, 0xFEFBD2ED, 0xEEF79EB8, 0xCCE07386, 0x9FB75562,
+	0x6B854049, 0x35503539, 0x02193331, 0x381D3535, 0x6F543736, 0xA58A3938, 0xDBC13239, 0xF409001B,
 	0x10, 0x1045,
-	0x6d6d1e00, 0x6d6d5b3d, 0x6e6d987a, 0x7e73d4b7, 0xab8ffef0, 0xe4cae9fa, 0xfcf3afcd, 0xfdff7290,
-	0xe2f03a55, 0xb5ce0f21, 0x79970104, 0x3d5a0900, 0x1324361c, 0x02077153, 0x0200ae90, 0x1c2be9cc,
+	0x6D6D1E00, 0x6D6D5B3D, 0x6E6D987A, 0x7E73D4B7, 0xAB8FFEF0, 0xE4CAE9FA, 0xFCF3AFCD, 0xFDFF7290,
+	0xE2F03A55, 0xB5CE0F21, 0x79970104, 0x3D5A0900, 0x1324361C, 0x02077153, 0x0200AE90, 0x1C2BE9CC,
 	0x10, 0x1045,
-	0x9999d9f8, 0x97989ab9, 0x90965b7a, 0x7f8a1c3b, 0x48680006, 0x0d291704, 0x00045535, 0x07019375,
-	0x2112ceb2, 0x5638f5e6, 0x9575fffc, 0xd1b4f0fc, 0xf5e7bbd9, 0xfffc7c9b, 0xf3fc3e5c, 0xd407021f,
-
+	0x9999D9F8, 0x97989AB9, 0x90965B7A, 0x7F8A1C3B, 0x48680006, 0x0D291704, 0x00045535, 0x07019375,
+	0x2112CEB2, 0x5638F5E6, 0x9575FFFC, 0xD1B4F0FC, 0xF5E7BBD9, 0xFFFC7C9B, 0xF3FC3E5C, 0xD407021F,
 	0x10, 0x47,
-	0xc9e00105, 0x9ab11008, 0x6f832c1c, 0x525d533c, 0x765f6c68, 0xa68e5b64, 0xd2bc4552, 0xf8e62435,
-	0xf2fa462e, 0xdfea745d, 0xc4d29e89, 0xa4b5c5b3, 0x8093e9d9, 0x526bfef7, 0x2139f2fc, 0x002fcae0,
+	0xC9E00105, 0x9AB11008, 0x6F832C1C, 0x525D533C, 0x765F6C68, 0xA68E5B64, 0xD2BC4552, 0xF8E62435,
+	0xF2FA462E, 0xDFEA745D, 0xC4D29E89, 0xA4B5C5B3, 0x8093E9D9, 0x526BFEF7, 0x2139F2FC, 0x002FCAE0,
 	0x10, 0x36,
-	0x18009fa5, 0x4930969a, 0x79619193, 0xaa929190, 0xdbc39893, 0xfdf0baa3, 0xeafae5d1, 0xbfd6fbf4,
-	0x8ea6ffff, 0x6477eaf9, 0x5356bcd5, 0x5f588ea5, 0x756a6176, 0x94843a4c, 0xb9a61829, 0xe5ed000a,
-
-
-	0x0a, 0x36,
-	0xebff0002, 0xc1d60100, 0x98ac0c06, 0x75862116, 0x53633b2e, 0x35435949, 0x1f297c6a, 0x0c15a38f,
-	0x0004ccb7, 0x0e03f2e0, 0x3621fffd, 0x5b4aecf9, 0x776acbdc, 0x797ba1b6, 0x566b8a90, 0x2c61928b,
-	0x0a, 0x36,
-	0x8f901700, 0x8186452e, 0x737b725c, 0x536a9287, 0x273da59c, 0x0414c5b3, 0x1905e9db, 0x452efbf4,
-	0x735cfffd, 0xa28afaff, 0xceb8ecf4, 0xf7e4d5e2, 0xf9ffa7be, 0xcce3979b, 0x9eb59495, 0x6fa79593,
-	0x0a, 0x36,
-	0xebff0900, 0xc1d61e14, 0x99ad372b, 0x73875044, 0x4c5f695c, 0x2c398977, 0x121eaf9b, 0x0005d9c3,
-	0x1d08f8ed, 0x4b34fffd, 0x7762f5fb, 0xa38ee7ee, 0xceb9d5de, 0xdfe2b6ca, 0xb3caa6aa, 0x85bca5a5,
-
-	0x10, 0x4f,
-	0x5d76fefd, 0x2d45e5f4, 0x0b1abdd4, 0x01058aa3, 0x02005670, 0x1b0b293d, 0x4a320f19, 0x7d630005,
-	0xae960f05, 0xd7c5311e, 0xf4e85e46, 0xfefc9278, 0xf6fec4ac, 0xcee4e8d7, 0x9cb6fbf6, 0x6882fefe,
-	0x10, 0x4f,
-	0x795ffffc, 0xaf94fdff, 0xddc7dff0, 0xf8eeafc9, 0xfffd7a94, 0xf8fe455f, 0xd3e81c2f, 0xa1bb0610,
-	0x6b860600, 0x3b521e0f, 0x16264731, 0x020a7a60, 0x0000b095, 0x1706e0cb, 0x492efaf0, 0x7f84fefe,
-
+	0x18009FA5, 0x4930969A, 0x79619193, 0xAA929190, 0xDBC39893, 0xFDF0BAA3, 0xEAFAE5D1, 0xBFD6FBF4,
+	0x8EA6FFFF, 0x6477EAF9, 0x5356BCD5, 0x5F588EA5, 0x756A6176, 0x94843A4C, 0xB9A61829, 0xE5ED000A,
+	0x0A, 0x36,
+	0xEBFF0002, 0xC1D60100, 0x98AC0C06, 0x75862116, 0x53633B2E, 0x35435949, 0x1F297C6A, 0x0C15A38F,
+	0x0004CCB7, 0x0E03F2E0, 0x3621FFFD, 0x5B4AECF9, 0x776ACBDC, 0x797BA1B6, 0x566B8A90, 0x2C61928B,
+	0x0A, 0x36,
+	0x8F901700, 0x8186452E, 0x737B725C, 0x536A9287, 0x273DA59C, 0x0414C5B3, 0x1905E9DB, 0x452EFBF4,
+	0x735CFFFD, 0xA28AFAFF, 0xCEB8ECF4, 0xF7E4D5E2, 0xF9FFA7BE, 0xCCE3979B, 0x9EB59495, 0x6FA79593,
+	0x0A, 0x36,
+	0xEBFF0900, 0xC1D61E14, 0x99AD372B, 0x73875044, 0x4C5F695C, 0x2C398977, 0x121EAF9B, 0x0005D9C3,
+	0x1D08F8ED, 0x4B34FFFD, 0x7762F5FB, 0xA38EE7EE, 0xCEB9D5DE, 0xDFE2B6CA, 0xB3CAA6AA, 0x85BCA5A5,
+	0x10, 0x4F,
+	0x5D76FEFD, 0x2D45E5F4, 0x0B1ABDD4, 0x01058AA3, 0x02005670, 0x1B0B293D, 0x4A320F19, 0x7D630005,
+	0xAE960F05, 0xD7C5311E, 0xF4E85E46, 0xFEFC9278, 0xF6FEC4AC, 0xCEE4E8D7, 0x9CB6FBF6, 0x6882FEFE,
+	0x10, 0x4F,
+	0x795FFFFC, 0xAF94FDFF, 0xDDC7DFF0, 0xF8EEAFC9, 0xFFFD7A94, 0xF8FE455F, 0xD3E81C2F, 0xA1BB0610,
+	0x6B860600, 0x3B521E0F, 0x16264731, 0x020A7A60, 0x0000B095, 0x1706E0CB, 0x492EFAF0, 0x7F84FEFE,
 	0x10, 0x00,
-	0xf4ff0d00, 0xe6ee2f1f, 0xd8df5240, 0xc8d17262, 0xbac29483, 0xacb3b6a4, 0x9ea4d8c7, 0x8f99f9ea,
-	0x7883e7f6, 0x666fc7d6, 0x595fa4b5, 0x49518495, 0x383f6474, 0x27304254, 0x161e2132, 0x012d0411,
-
-
+	0xF4FF0D00, 0xE6EE2F1F, 0xD8DF5240, 0xC8D17262, 0xBAC29483, 0xACB3B6A4, 0x9EA4D8C7, 0x8F99F9EA,
+	0x7883E7F6, 0x666FC7D6, 0x595FA4B5, 0x49518495, 0x383F6474, 0x27304254, 0x161E2132, 0x012D0411
 };
 #endif
 
 
 #ifdef TPD_PROXIMITY
-#if 0
-#include <linux/hwmsensor.h>
-#include <linux/hwmsen_dev.h>
-#include <linux/sensors_io.h>
-#else
 #include <hwmsensor.h>
 #include <hwmsen_dev.h>
 #include <sensors_io.h>
-#endif
 #include <linux/wakelock.h>
 static u8 tpd_proximity_flag = 0; //flag whether start alps
 static u8 tpd_proximity_detect = 1;//0-->close ; 1--> far away
@@ -219,53 +203,41 @@ static int i2c_lock_flag = 0;
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 #include <linux/seq_file.h>
-//static struct proc_dir_entry *gsl_config_proc = NULL;
 #define GSL_CONFIG_PROC_FILE "gsl_config"
 #define CONFIG_LEN 31
 static char gsl_read[CONFIG_LEN];
 static u8 gsl_data_proc[8] = {0};
 static u8 gsl_proc_flag = 0;
 #endif
-//static u8 int_type = 0;
-
 
 static DECLARE_WAIT_QUEUE_HEAD(waiter);
 static struct task_struct *thread = NULL;
 static int tpd_flag = 0;
 
-
 #ifdef GSL_DEBUG
-#define print_info(fmt, args...)   \
-		do{                              \
-		    printk("[tp-gsl][%s]"fmt,__func__, ##args);     \
-		}while(0)
+#define print_info(fmt, args...) printk("[tp-gsl][%s]" fmt, __func__, ##args)
 #else
 #define print_info(fmt, args...)
 #endif
 
 #ifdef TPD_HAVE_BUTTON
 extern void tpd_button(unsigned int x, unsigned int y, unsigned int down);
-//static int tpd_keys_local[TPD_KEY_COUNT] = TPD_KEYS;
-//static int tpd_keys_dim_local[TPD_KEY_COUNT][4] = TPD_KEYS_DIM;
 #endif
 
 #ifdef GTP_SUPPORT_I2C_DMA
 static void msg_dma_alloct(void)
 {
-	if (NULL == g_dma_buff_va)
-	{
+	if (NULL == g_dma_buff_va) {
 		tpd->dev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 		g_dma_buff_va = (u8 *)dma_alloc_coherent(&tpd->dev->dev, 128, &g_dma_buff_pa, GFP_KERNEL);
 	}
 
-	if (!g_dma_buff_va)
-	{
+	if (!g_dma_buff_va) {
 		print_info("[DMA][Error] Allocate DMA I2C Buffer failed!\n");
 	}
 }
 static void msg_dma_release(void) {
-	if (g_dma_buff_va)
-	{
+	if (g_dma_buff_va) {
 		dma_free_coherent(NULL, 128, g_dma_buff_va, g_dma_buff_pa);
 		g_dma_buff_va = NULL;
 		g_dma_buff_pa = 0;
@@ -274,10 +246,8 @@ static void msg_dma_release(void) {
 }
 #endif
 
-
 #ifdef GTP_SUPPORT_I2C_DMA
-static int gsl_read_interface(struct i2c_client *client,
-                              u8 reg, u8 *buf, u32 num)
+static int gsl_read_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 {
 	int err = 0;
 	int i;
@@ -285,11 +255,9 @@ static int gsl_read_interface(struct i2c_client *client,
 	temp[0] = reg;
 	mutex_lock(&gsl_i2c_lock);
 
-	if ((NULL != client) && (num > 0) && (num <= 128))
-	{
+	if ((NULL != client) && (num > 0) && (num <= 128)) {
 		client->addr = (client->addr & I2C_MASK_FLAG) | I2C_DMA_FLAG;
-		if (temp[0] < 0x80)
-		{
+		if (temp[0] < 0x80) {
 			temp[0] = (temp[0] + 8) & 0x5c;
 			memcpy(g_dma_buff_va, temp, 1);
 
@@ -301,8 +269,7 @@ static int gsl_read_interface(struct i2c_client *client,
 			i2c_master_send(client, (unsigned char *)g_dma_buff_pa, 1);
 			err = i2c_master_recv(client, (unsigned char *)g_dma_buff_pa, 4);
 		}
-		for (i = 0; i < num; i++)
-		{
+		for (i = 0; i < num; i++) {
 			temp[0] = reg + i;
 			memcpy(g_dma_buff_va, temp, 1);
 
@@ -321,15 +288,13 @@ static int gsl_read_interface(struct i2c_client *client,
 	return err;
 }
 #else
-static int gsl_read_interface(struct i2c_client *client,
-                              u8 reg, u8 *buf, u32 num)
+static int gsl_read_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 {
 	int err = 0;
 	int i;
 	u8 temp = reg;
 	mutex_lock(&gsl_i2c_lock);
-	if (temp < 0x80)
-	{
+	if (temp < 0x80) {
 		temp = (temp + 8) & 0x5c;
 		i2c_master_send(client, &temp, 1);
 		err = i2c_master_recv(client, &buf[0], 4);
@@ -337,8 +302,7 @@ static int gsl_read_interface(struct i2c_client *client,
 		i2c_master_send(client, &temp, 1);
 		err = i2c_master_recv(client, &buf[0], 4);
 	}
-	for (i = 0; i < num; i++)
-	{
+	for (i = 0; i < num; i++) {
 		temp = reg + i;
 		i2c_master_send(client, &temp, 1);
 		if ((i + 8) < num)
@@ -351,13 +315,11 @@ static int gsl_read_interface(struct i2c_client *client,
 
 	return err;
 }
-
 #endif
 
 #ifdef GTP_SUPPORT_I2C_DMA
 s32 gsl_write_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 {
-
 	int i = 0;
 	int ret = 0;
 	s32 writelen;
@@ -375,11 +337,8 @@ s32 gsl_write_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 	if (0) { //(writelen <= 8) {
 		client->ext_flag = client->ext_flag & (~I2C_DMA_FLAG);
 		return i2c_master_send(client, wr_buf, writelen);
-	}
-	else if ( 1 && (NULL != g_dma_buff_va))
-	{
-		for (i = 0; i < writelen; i++)
-		{
+	} else if ( 1 && (NULL != g_dma_buff_va)) {
+		for (i = 0; i < writelen; i++) {
 			g_dma_buff_va[i] = wr_buf[i];
 			//print_info("[DMA][gsl_write_interface] g_dma_buff_va[%d]=%x\n",i,g_dma_buff_va[i]);
 		}
@@ -393,9 +352,7 @@ s32 gsl_write_interface(struct i2c_client *client, u8 reg, u8 *buf, u32 num)
 	return 1;
 }
 #else
-
-static int gsl_write_interface(struct i2c_client *client,
-                               const u8 reg, u8 *buf, u32 num)
+static int gsl_write_interface(struct i2c_client *client, const u8 reg, u8 *buf, u32 num)
 {
 	struct i2c_msg xfer_msg[1] = {{0}}; //modify crystal
 	int err;
@@ -408,50 +365,13 @@ static int gsl_write_interface(struct i2c_client *client,
 	xfer_msg[0].len = num + 1;
 	xfer_msg[0].flags = 0;//client->flags & I2C_M_TEN;
 	xfer_msg[0].buf = tmp_buf;
-	xfer_msg[0].timing = 400;//I2C_TRANS_SPEED;
+	//xfer_msg[0].timing = 400;//I2C_TRANS_SPEED;
 	mutex_lock(&gsl_i2c_lock);
 
 	err = i2c_transfer(client->adapter, xfer_msg, 1);
 	mutex_unlock(&gsl_i2c_lock);
 
-
 	return err;
-}
-#endif
-
-
-#if 0
-static unsigned int gsl_read_oneframe_data(unsigned int *data,
-        unsigned int addr, unsigned int len)
-{
-	u8 buf[4];
-	int i;
-	printk("tp-gsl-gesture %s\n", __func__);
-	printk("gsl_read_oneframe_data:::addr=%x,len=%x\n", addr, len);
-	for (i = 0; i < len / 2; i++) {
-		buf[0] = ((addr + i * 8) / 0x80) & 0xff;
-		buf[1] = (((addr + i * 8) / 0x80) >> 8) & 0xff;
-		buf[2] = (((addr + i * 8) / 0x80) >> 16) & 0xff;
-		buf[3] = (((addr + i * 8) / 0x80) >> 24) & 0xff;
-		gsl_write_interface(ddata->client, 0xf0, buf, 4);
-		gsl_read_interface(ddata->client, (addr + i * 8) % 0x80, (char *)&data[i * 2], 8);
-	}
-	if (len % 2) {
-		buf[0] = ((addr + len * 4 - 4) / 0x80) & 0xff;
-		buf[1] = (((addr + len * 4 - 4) / 0x80) >> 8) & 0xff;
-		buf[2] = (((addr + len * 4 - 4) / 0x80) >> 16) & 0xff;
-		buf[3] = (((addr + len * 4 - 4) / 0x80) >> 24) & 0xff;
-		gsl_write_interface(ddata->client, 0xf0, buf, 4);
-		gsl_read_interface(ddata->client, (addr + len * 4 - 4) % 0x80, (char *)&data[len - 1], 4);
-	}
-#if 1
-	for (i = 0; i < len; i++) {
-		printk("gsl_read_oneframe_data =%x\n", data[i]);
-		//printk("gsl_read_oneframe_data =%x\n",data[len-1]);
-	}
-#endif
-
-	return len;
 }
 #endif
 
@@ -471,6 +391,7 @@ static int gsl_read_TotalAdr(struct i2c_client *client, u32 addr, u32 *data)
 	}
 	return err;
 }
+
 static int gsl_write_TotalAdr(struct i2c_client *client, u32 addr, u32 *data)
 {
 	int err;
@@ -488,6 +409,7 @@ static int gsl_write_TotalAdr(struct i2c_client *client, u32 addr, u32 *data)
 	err = gsl_write_interface(client, addr % 0x80, buf, 4);
 	return err;
 }
+
 static int gsl_gpio_idt_tp(struct gsl_ts_data *ts)
 {
 	int i;
@@ -538,26 +460,23 @@ static int gsl_gpio_idt_tp(struct gsl_ts_data *ts)
 		tstate = 2;
 	if (rstate == 1 && tstate == 2) {
 		gsl_cfg_index = 0;
-	}
-	else if (rstate == 2 && tstate == 2) {
+	} else if (rstate == 2 && tstate == 2) {
 		gsl_cfg_index = 1;
-	}
-	else if (rstate == 0 && tstate == 0) {
+	} else if (rstate == 0 && tstate == 0) {
 		gsl_cfg_index = 2;
 	}
 	print_info("[tpd-gsl][%s] [rstate,status]=[%d,%d]\n", __func__, rstate, tstate);
 	return 1;
 }
 #endif
+
 static int gsl_test_i2c(struct i2c_client *client)
 {
 	int i, err;
 	u8 buf[4] = {0};
-	for (i = 0; i < 5; i++)
-	{
+	for (i = 0; i < 5; i++) {
 		err = gsl_read_interface(client, 0xfc, buf, 4);
-		if (err > 0)
-		{
+		if (err > 0) {
 			printk("[tp-gsl] i2c read 0xfc = 0x%02x%02x%02x%02x\n",
 			       buf[3], buf[2], buf[1], buf[0]);
 			break;
@@ -587,6 +506,7 @@ static void gsl_io_control(struct i2c_client *client)
 	msleep(50);
 #endif
 }
+
 static void gsl_start_core(struct i2c_client *client)
 {
 	u8 buf[4] = {0};
@@ -610,7 +530,6 @@ static void gsl_start_core(struct i2c_client *client)
 #ifdef GSL_ALG_ID
 	gsl_DataInit(gsl_cfg_table[gsl_cfg_index].data_id);
 #endif
-
 }
 
 static void gsl_reset_core(struct i2c_client *client)
@@ -650,48 +569,6 @@ static void gsl_clear_reg(struct i2c_client *client)
 	//clear reg
 }
 
-#if 0
-#define DMA_TRANS_LEN 0x20
-static void gsl_load_fw(struct i2c_client *client, const struct fw_data *GSL_DOWNLOAD_DATA, int data_len)
-{
-	u8 buf[DMA_TRANS_LEN * 4] = {0};
-	u8 send_flag = 1;
-	u8 addr = 0;
-	u32 source_line = 0;
-	u32 source_len = data_len;//ARRAY_SIZE(GSL_DOWNLOAD_DATA);
-
-	print_info("=============gsl_load_fw start==============\n");
-
-	for (source_line = 0; source_line < source_len; source_line++)
-	{
-		/* init page trans, set the page val */
-		if (0xf0 == GSL_DOWNLOAD_DATA[source_line].offset)
-		{
-			memcpy(buf, &GSL_DOWNLOAD_DATA[source_line].val, 4);
-			gsl_write_interface(client, 0xf0, buf, 4);
-			send_flag = 1;
-		}
-		else
-		{
-			if (1 == send_flag % (DMA_TRANS_LEN < 0x20 ? DMA_TRANS_LEN : 0x20))
-				addr = (u8)GSL_DOWNLOAD_DATA[source_line].offset;
-
-			memcpy((buf + send_flag * 4 - 4), &GSL_DOWNLOAD_DATA[source_line].val, 4);
-
-			if (0 == send_flag % (DMA_TRANS_LEN < 0x20 ? DMA_TRANS_LEN : 0x20))
-			{
-				gsl_write_interface(client, addr, buf, DMA_TRANS_LEN * 4);
-				send_flag = 0;
-			}
-
-			send_flag++;
-		}
-	}
-
-	print_info("=============gsl_load_fw end==============\n");
-
-}
-#else
 static void gsl_load_fw(struct i2c_client *client, const struct fw_data *GSL_DOWNLOAD_DATA, int data_len)
 {
 	u8 buf[4] = {0};
@@ -710,7 +587,6 @@ static void gsl_load_fw(struct i2c_client *client, const struct fw_data *GSL_DOW
 		gsl_write_interface(client, addr, buf, 4);
 	}
 }
-#endif
 
 static void gsl_sw_init(struct i2c_client *client)
 {
@@ -721,18 +597,12 @@ static void gsl_sw_init(struct i2c_client *client)
 	if (1 == gsl_sw_flag)
 		return;
 	gsl_sw_flag = 1;
-#if 0 //modify crystal
-	mt_set_gpio_out(GPIO_CTP_RST_PIN, GPIO_OUT_ZERO);
-	msleep(20);
-	mt_set_gpio_out(GPIO_CTP_RST_PIN, GPIO_OUT_ONE);
-	msleep(20);
-#else
 
 	tpd_gpio_output(GTP_RST_PORT, 0);
 	msleep(20);
 	tpd_gpio_output(GTP_RST_PORT, 1);
 	msleep(20);
-#endif
+
 	temp = gsl_test_i2c(client);
 	if (temp < 0) {
 		gsl_sw_flag = 0;
@@ -757,8 +627,6 @@ static void gsl_sw_init(struct i2c_client *client)
 	gsl_read_interface(client, 0x7c, read_buf, 4);
 	print_info("[gsl1680][%s] addr = (b6,7c); read_buf = %02x%02x%02x%02x\n",
 	           __func__, read_buf[3], read_buf[2], read_buf[1], read_buf[0]);
-
-
 }
 
 static void check_mem_data(struct i2c_client *client)
@@ -768,23 +636,7 @@ static void check_mem_data(struct i2c_client *client)
 
 	print_info("[gsl1680][%s] addr = 0xb0; read_buf = %02x%02x%02x%02x\n",
 	           __func__, read_buf[3], read_buf[2], read_buf[1], read_buf[0]);
-	if (read_buf[3] != 0x5a || read_buf[2] != 0x5a || read_buf[1] != 0x5a || read_buf[0] != 0x5a)
-	{
-#ifdef TPD_POWER_VTP28_USE_VCAMA  //add for esd
-		{
-			pmic_set_register_value(PMIC_RG_VCAMA_EN, 0);
-			msleep(10);
-			pmic_set_register_value(PMIC_RG_VCAMA_EN, 1);
-			pmic_set_register_value(PMIC_RG_VCAMA_VOSEL, 0x03);
-		}
-#else
-		{
-			pmic_set_register_value(PMIC_RG_VGP1_EN, 0);
-			msleep(10);
-			pmic_set_register_value(PMIC_RG_VGP1_EN, 1);
-			pmic_set_register_value(PMIC_RG_VGP1_VOSEL, 0x5);
-		}
-#endif
+	if (read_buf[3] != 0x5a || read_buf[2] != 0x5a || read_buf[1] != 0x5a || read_buf[0] != 0x5a) {
 		msleep(10);
 		gsl_sw_init(client);
 	}
@@ -827,34 +679,27 @@ static int char_to_int(char ch)
 		return (ch - 'a' + 10);
 }
 
-//static int gsl_config_read_proc(char *page, char **start, off_t off, int count, int *eof, void *data)
 static int gsl_config_read_proc(struct seq_file *m, void *v)
 {
 	char temp_data[5] = {0};
 	//int i;
 	unsigned int tmp = 0;
-	if ('v' == gsl_read[0] && 's' == gsl_read[1])
-	{
+	if ('v' == gsl_read[0] && 's' == gsl_read[1]) {
 #ifdef GSL_ALG_ID
 		tmp = gsl_version_id();
 #else
 		tmp = 0x20121215;
 #endif
 		seq_printf(m, "version:%x\n", tmp);
-	}
-	else if ('r' == gsl_read[0] && 'e' == gsl_read[1])
-	{
-		if ('i' == gsl_read[3])
-		{
+	} else if ('r' == gsl_read[0] && 'e' == gsl_read[1]) {
+		if ('i' == gsl_read[3]) {
 #ifdef GSL_ALG_ID
 			tmp = (gsl_data_proc[5] << 8) | gsl_data_proc[4];
 			seq_printf(m, "gsl_config_data_id[%d] = ", tmp);
 			if (tmp >= 0 && tmp < gsl_cfg_table[gsl_cfg_index].data_size)
 				seq_printf(m, "%d\n", gsl_cfg_table[gsl_cfg_index].data_id[tmp]);
 #endif
-		}
-		else
-		{
+		} else {
 			gsl_write_interface(ddata->client, 0xf0, &gsl_data_proc[4], 4);
 			gsl_read_interface(ddata->client, gsl_data_proc[0], temp_data, 4);
 			seq_printf(m, "offset : {0x%02x,0x", gsl_data_proc[0]);
@@ -890,7 +735,7 @@ static int gsl_config_read_proc(struct seq_file *m, void *v)
 #endif
 	return 0;
 }
-//static int gsl_config_write_proc(struct file *file, const char *buffer, unsigned long count, void *data)
+
 static ssize_t  gsl_config_write_proc(struct file *file, const char __user  *buffer, size_t  count, loff_t *data)
 {
 	u8 buf[8] = {0};
@@ -899,19 +744,16 @@ static ssize_t  gsl_config_write_proc(struct file *file, const char __user  *buf
 	int tmp = 0;
 	int tmp1 = 0;
 	print_info("[tp-gsl][%s] \n", __func__);
-	if (count > 512)
-	{
+	if (count > 512) {
 //		print_info("size not match [%d:%ld]\n", CONFIG_LEN, count);
 		return -EFAULT;
 	}
 	path_buf = kzalloc(count, GFP_KERNEL);
-	if (!path_buf)
-	{
+	if (!path_buf) {
 		printk("alloc path_buf memory error \n");
 		return -1;
 	}
-	if (copy_from_user(path_buf, buffer, count))
-	{
+	if (copy_from_user(path_buf, buffer, count)) {
 		print_info("copy from user fail\n");
 		goto exit_write_proc_out;
 	}
@@ -932,40 +774,29 @@ static ssize_t  gsl_config_write_proc(struct file *file, const char __user  *buf
 #ifdef GSL_APPLICATION
 	}
 #endif
-	if ('v' == temp_buf[0] && 's' == temp_buf[1]) //version //vs
-	{
+	if ('v' == temp_buf[0] && 's' == temp_buf[1]) { //version //vs
 		memcpy(gsl_read, temp_buf, 4);
 		printk("gsl version\n");
 	}
-	else if ('s' == temp_buf[0] && 't' == temp_buf[1]) //start //st
-	{
+	else if ('s' == temp_buf[0] && 't' == temp_buf[1]) { //start //st
 		gsl_proc_flag = 1;
 		gsl_reset_core(ddata->client);
-	}
-	else if ('e' == temp_buf[0] && 'n' == temp_buf[1]) //end //en
-	{
+	} else if ('e' == temp_buf[0] && 'n' == temp_buf[1]) { //end //en
 		msleep(20);
 		gsl_reset_core(ddata->client);
 		gsl_start_core(ddata->client);
 		gsl_proc_flag = 0;
-	}
-	else if ('r' == temp_buf[0] && 'e' == temp_buf[1]) //read buf //
-	{
+	} else if ('r' == temp_buf[0] && 'e' == temp_buf[1]) { //read buf //
 		memcpy(gsl_read, temp_buf, 4);
 		memcpy(gsl_data_proc, buf, 8);
-	}
-	else if ('w' == temp_buf[0] && 'r' == temp_buf[1]) //write buf
-	{
+	} else if ('w' == temp_buf[0] && 'r' == temp_buf[1]) { //write buf
 		gsl_write_interface(ddata->client, buf[4], buf, 4);
 	}
-
 #ifdef GSL_ALG_ID
-	else if ('i' == temp_buf[0] && 'd' == temp_buf[1]) //write id config //
-	{
+	else if ('i' == temp_buf[0] && 'd' == temp_buf[1]) { //write id config //
 		tmp1 = (buf[7] << 24) | (buf[6] << 16) | (buf[5] << 8) | buf[4];
 		tmp = (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
-		if (tmp1 >= 0 && tmp1 < gsl_cfg_table[gsl_cfg_index].data_size)
-		{
+		if (tmp1 >= 0 && tmp1 < gsl_cfg_table[gsl_cfg_index].data_size) {
 			gsl_cfg_table[gsl_cfg_index].data_id[tmp1] = tmp;
 		}
 	}
@@ -1025,8 +856,7 @@ static void gsl_timer_check_func(struct work_struct *work)
 	memcpy(int_1st, read_buf, 4);
 
 	if (int_1st[3] == int_2nd[3] && int_1st[2] == int_2nd[2] &&
-	        int_1st[1] == int_2nd[1] && int_1st[0] == int_2nd[0])
-	{
+	        int_1st[1] == int_2nd[1] && int_1st[0] == int_2nd[0]) {
 		printk("======int_1st: %x %x %x %x , int_2nd: %x %x %x %x ======\n",
 		       int_1st[3], int_1st[2], int_1st[1], int_1st[0],
 		       int_2nd[3], int_2nd[2], int_2nd[1], int_2nd[0]);
@@ -1078,21 +908,6 @@ static void gsl_timer_check_func(struct work_struct *work)
 	}
 queue_monitor_work:
 	if (init_chip_flag) {
-
-#ifdef TPD_POWER_VTP28_USE_VCAMA		//add for esd
-
-		pmic_set_register_value(PMIC_RG_VCAMA_EN, 0);
-		msleep(10);
-		pmic_set_register_value(PMIC_RG_VCAMA_EN, 1);
-		pmic_set_register_value(PMIC_RG_VCAMA_VOSEL, 0x03);
-
-#else
-		pmic_set_register_value(PMIC_RG_VGP1_EN, 0);
-		msleep(10);
-		pmic_set_register_value(PMIC_RG_VGP1_EN, 1);
-		pmic_set_register_value(PMIC_RG_VGP1_VOSEL, 0x5);
-#endif
-		msleep(10);
 		gsl_sw_init(gsl_client);
 		memset(int_1st, 0xff, sizeof(int_1st));
 	}
@@ -1106,11 +921,11 @@ queue_monitor_work:
 #endif
 
 #ifdef TPD_PROXIMITY
-
 static int tpd_get_ps_value(void)
 {
 	return tpd_proximity_detect;
 }
+
 static int tpd_enable_ps(int enable)
 {
 	u8 buf[4];
@@ -1157,11 +972,9 @@ static int tpd_ps_operate(void* self, uint32_t command, void* buff_in, int size_
 	int value;
 	hwm_sensor_data *sensor_data;
 
-	switch (command)
-	{
+	switch (command) {
 	case SENSOR_DELAY:
-		if ((buff_in == NULL) || (size_in < sizeof(int)))
-		{
+		if ((buff_in == NULL) || (size_in < sizeof(int))) {
 			printk("Set delay parameter error!\n");
 			err = -EINVAL;
 		}
@@ -1169,26 +982,20 @@ static int tpd_ps_operate(void* self, uint32_t command, void* buff_in, int size_
 		break;
 
 	case SENSOR_ENABLE:
-		if ((buff_in == NULL) || (size_in < sizeof(int)))
-		{
+		if ((buff_in == NULL) || (size_in < sizeof(int))) {
 			printk("Enable sensor parameter error!\n");
 			err = -EINVAL;
-		}
-		else
-		{
+		} else {
 			value = *(int *)buff_in;
 			err = tpd_enable_ps(value);
 		}
 		break;
 
 	case SENSOR_GET_DATA:
-		if ((buff_out == NULL) || (size_out < sizeof(hwm_sensor_data)))
-		{
+		if ((buff_out == NULL) || (size_out < sizeof(hwm_sensor_data))) {
 			printk("get sensor data parameter error!\n");
 			err = -EINVAL;
-		}
-		else
-		{
+		} else {
 			sensor_data = (hwm_sensor_data *)buff_out;
 
 			sensor_data->values[0] = tpd_get_ps_value();
@@ -1204,23 +1011,15 @@ static int tpd_ps_operate(void* self, uint32_t command, void* buff_in, int size_
 	}
 
 	return err;
-
 }
 #endif
+
 #define GSL_CHIP_NAME	"gslx68x"
 
 #ifdef GSL_GESTURE
 static void gsl_enter_doze(struct gsl_ts_data *ts)
 {
 	u8 buf[4] = {0};
-#if 0
-	u32 tmp;
-	gsl_reset_core(ts->client);
-	temp = ARRAY_SIZE(GSLX68X_FW_GESTURE);
-	gsl_load_fw(ts->client, GSLX68X_FW_GESTURE, temp);
-	gsl_start_core(ts->client);
-	msleep(1000);
-#endif
 
 	buf[0] = 0xa;
 	buf[1] = 0;
@@ -1232,7 +1031,6 @@ static void gsl_enter_doze(struct gsl_ts_data *ts)
 	buf[2] = 0x1;
 	buf[3] = 0x5a;
 	gsl_write_interface(ts->client, 0x8, buf, 4);
-	//gsl_gesture_status = GE_NOWORK;
 	msleep(10);
 	gsl_gesture_status = GE_ENABLE;
 
@@ -1265,131 +1063,34 @@ static void gsl_quit_doze(struct gsl_ts_data *ts)
 	buf[3] = 0x5a;
 	gsl_write_interface(ts->client, 0x8, buf, 4);
 	msleep(10);
-
-#if 0
-	gsl_reset_core(ddata->client);
-	temp = ARRAY_SIZE(GSLX68X_FW_CONFIG);
-	//gsl_load_fw();
-	gsl_load_fw(ddata->client, GSLX68X_FW_CONFIG, temp);
-	gsl_start_core(ddata->client);
-#endif
 }
 #endif
-/*
-static ssize_t gsl_sysfs_tpgesture_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	u32 count = 0;
-	count += scnprintf(buf,PAGE_SIZE,"tp gesture is on/off:\n");
-	if(gsl_gesture_flag == 1){
-		count += scnprintf(buf+count,PAGE_SIZE-count,
-				" on \n");
-	}else if(gsl_gesture_flag == 0){
-		count += scnprintf(buf+count,PAGE_SIZE-count,
-				" off \n");
-	}
-	count += scnprintf(buf+count,PAGE_SIZE-count,"tp gesture:");
-	count += scnprintf(buf+count,PAGE_SIZE-count,
-			"%c\n",gsl_gesture_c);
-    	return count;
-}
-static ssize_t gsl_sysfs_tpgesturet_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-#if 1
-	if(buf[0] == '0'){
-		gsl_gesture_flag = 0;
-	}else if(buf[0] == '1'){
-		gsl_gesture_flag = 1;
-	}
-#endif
-	return count;
-}
 
-
-static ssize_t gsl_sysfs_version_show(struct device *dev,struct device_attribute *attr, char *buf)
-{
-//	ssize_t len=0;
-	u32 tmp;
-	u8 buf_tmp[4];
-	char *ptr = buf;
-	ptr += sprintf(ptr,"sileadinc:");
-	ptr += sprintf(ptr,GSL_CHIP_NAME);
-#ifdef GSL_ALG_ID
-	tmp = gsl_version_id();
-	ptr += sprintf(ptr,":%08x:",tmp);
-	ptr += sprintf(ptr,"%08x:",
-		gsl_cfg_table[gsl_cfg_index].data_id[0]);
-#endif
-	buf_tmp[0]=0x3;buf_tmp[1]=0;buf_tmp[2]=0;buf_tmp[3]=0;
-	gsl_write_interface(ddata->client,0xf0,buf_tmp,4);
-	gsl_read_interface(ddata->client,0,buf_tmp,4);
-	ptr += sprintf(ptr,"%02x%02x%02x%02x\n",buf_tmp[3],buf_tmp[2],buf_tmp[1],buf_tmp[0]);
-
-    	return (ptr-buf);
-}
-static DEVICE_ATTR(version, 0444, gsl_sysfs_version_show, NULL);
-static struct attribute *gsl_attrs[] = {
-	&dev_attr_version.attr,
-	NULL
-};
-static const struct attribute_group gsl_attr_group = {
-	.attrs = gsl_attrs,
-};
-
-
-
-static unsigned int gsl_sysfs_init(void)
-{
-	int ret;
-	struct kobject *gsl_debug_kobj;
-	gsl_debug_kobj = kobject_create_and_add("gsl_touchscreen", NULL) ;
-	if (gsl_debug_kobj == NULL)
-	{
-		printk("%s: subsystem_register failed\n", __func__);
-		return -ENOMEM;
-	}
-	ret = sysfs_create_file(gsl_debug_kobj, &dev_attr_version.attr);
-	if (ret)
-	{
-		printk("%s: sysfs_create_version_file failed\n", __func__);
-		return ret;
-	}
-}
-*/
 static void gsl_report_point(struct gsl_touch_info *ti)
 {
 	int tmp = 0;
 	static int gsl_up_flag = 0; //prevent more up event
 	print_info("gsl_report_point %d \n", ti->finger_num);
 
-	if (unlikely(ti->finger_num == 0))
-	{
+	if (unlikely(ti->finger_num == 0)) {
 		if (gsl_up_flag == 0)
 			return;
 		gsl_up_flag = 0;
 		input_report_key(tpd->dev, BTN_TOUCH, 0);
 		input_mt_sync(tpd->dev);
 		if (FACTORY_BOOT == get_boot_mode() ||
-		        RECOVERY_BOOT == get_boot_mode())
-		{
-
+		        RECOVERY_BOOT == get_boot_mode()) {
 			tpd_button(ti->x[tmp], ti->y[tmp], 0);
-
 		}
-	}
-	else
-	{
+	} else {
 		gsl_up_flag = 1;
-		for (tmp = 0; ti->finger_num > tmp; tmp++)
-		{
+		for (tmp = 0; ti->finger_num > tmp; tmp++) {
 			print_info("[lifan_gsl1680](x[%d],y[%d]) = (%d,%d);\n",
 			           ti->id[tmp], ti->id[tmp], ti->x[tmp], ti->y[tmp]);
 			input_report_key(tpd->dev, BTN_TOUCH, 1);
 			input_report_abs(tpd->dev, ABS_MT_TOUCH_MAJOR, 1);
 
-			if (FACTORY_BOOT == get_boot_mode() || RECOVERY_BOOT == get_boot_mode())
-			{
+			if (FACTORY_BOOT == get_boot_mode() || RECOVERY_BOOT == get_boot_mode()) {
 				tpd_button(ti->x[tmp], ti->y[tmp], 1);
 			}
 			input_report_abs(tpd->dev, ABS_MT_TRACKING_ID, ti->id[tmp] - 1);
@@ -1428,17 +1129,12 @@ static void gsl_report_work(void)
 	int err;
 	hwm_sensor_data sensor_data;
 	/*added by bernard*/
-	if (tpd_proximity_flag == 1)
-	{
-
+	if (tpd_proximity_flag == 1) {
 		gsl_read_interface(ddata->client, 0xac, buf, 4);
-		if (buf[0] == 1 && buf[1] == 0 && buf[2] == 0 && buf[3] == 0)
-		{
+		if (buf[0] == 1 && buf[1] == 0 && buf[2] == 0 && buf[3] == 0) {
 			tpd_proximity_detect = 0;
 			//sensor_data.values[0] = 0;
-		}
-		else
-		{
+		} else {
 			tpd_proximity_detect = 1;
 			//sensor_data.values[0] = 1;
 		}
@@ -1449,8 +1145,7 @@ static void gsl_report_work(void)
 		sensor_data.value_divide = 1;
 		sensor_data.status = SENSOR_STATUS_ACCURACY_MEDIUM;
 		//let up layer to know
-		if ((err = hwmsen_get_interrupt_data(ID_PROXIMITY, &sensor_data)))
-		{
+		if ((err = hwmsen_get_interrupt_data(ID_PROXIMITY, &sensor_data))) {
 			print_info("call hwmsen_get_interrupt_data fail = %d\n", err);
 		}
 	}
@@ -1471,17 +1166,9 @@ static void gsl_report_work(void)
 	printk("GSL:::0x80=%02x%02x%02x%02x\n", tmp_buf[3], tmp_buf[2], tmp_buf[1], tmp_buf[0]);
 	printk("GSL:::0x84=%02x%02x%02x%02x\n", tmp_buf[7], tmp_buf[6], tmp_buf[5], tmp_buf[4]);
 	printk("GSL:::0x88=%02x%02x%02x%02x\n", tmp_buf[11], tmp_buf[10], tmp_buf[9], tmp_buf[8]);
-//	if(GE_ENABLE == gsl_gesture_status && gsl_gesture_flag == 1){
-//		for(tmp=0;tmp<3;tmp++){
-//			printk("tp-gsl-gesture 0x%2x=0x%02x%02x%02x%02x;\n",
-//					tmp*4+0x80,tmp_buf[tmp*4+3],tmp_buf[tmp*4+2],tmp_buf[tmp*4+1],
-//					tmp_buf[tmp*4]);
-//		}
-//	}
 #endif
 	print_info("tp-gsl  finger_num = %d\n", cinfo.finger_num);
-	for (tmp = 0; tmp < (cinfo.finger_num > 10 ? 10 : cinfo.finger_num); tmp++)
-	{
+	for (tmp = 0; tmp < (cinfo.finger_num > 10 ? 10 : cinfo.finger_num); tmp++) {
 		cinfo.id[tmp] = tmp_buf[tmp * 4 + 7] >> 4;
 		cinfo.y[tmp] = (tmp_buf[tmp * 4 + 4] | ((tmp_buf[tmp * 4 + 5]) << 8));
 		cinfo.x[tmp] = (tmp_buf[tmp * 4 + 6] | ((tmp_buf[tmp * 4 + 7] & 0x0f) << 8));
@@ -1495,8 +1182,7 @@ static void gsl_report_work(void)
 
 	tmp1 = gsl_mask_tiaoping();
 	print_info("[tp-gsl] tmp1=%x\n", tmp1);
-	if (tmp1 > 0 && tmp1 < 0xffffffff)
-	{
+	if (tmp1 > 0 && tmp1 < 0xffffffff) {
 		buf[0] = 0xa;
 		buf[1] = 0;
 		buf[2] = 0;
@@ -1511,6 +1197,7 @@ static void gsl_report_work(void)
 		gsl_write_interface(ddata->client, 0x8, buf, 4);
 	}
 #endif
+
 #ifdef GSL_GESTURE
 	printk("gsl_gesture_status=%d,gsl_gesture_flag=%d\n", gsl_gesture_status, gsl_gesture_flag);
 
@@ -1604,29 +1291,21 @@ static void gsl_report_work(void)
 
 	gsl_report_point(&cinfo);
 
-
-
 #ifdef GSL_TIMER
 i2c_lock_schedule:
 	i2c_lock_flag = 0;
 
 #endif
-
-
-
-
 }
 
 
 #if 1//ndef CONFIG_OF_TOUCH
 static int touch_event_handler(void *unused)
 {
-
-	struct sched_param param = { .sched_priority = RTPM_PRIO_TPD };
+	struct sched_param param = { .sched_priority = 4 };
 	sched_setscheduler(current, SCHED_RR, &param);
 	print_info("[tpd-gsl][%s] 6666666666666666666\n", __func__);
-	do
-	{
+	do {
 		print_info("[tpd-gsl][%s] 7777777777777777777777777\n", __func__);
 #ifdef CONFIG_OF_TOUCH
 		enable_irq(touch_irq);
@@ -1681,8 +1360,8 @@ static int gsl_DrvWire_idt_tp(struct gsl_ts_data *ts)
 identify_tp_repeat:
 	gsl_clear_reg(ts->client);
 	gsl_reset_core(ts->client);
-	num = ARRAY_SIZE(GSL_IDT_FW);
-	gsl_load_fw(ts->client, GSL_IDT_FW, num);
+	num = ARRAY_SIZE(GSLX680_C558_FW);
+	gsl_load_fw(ts->client, GSLX680_C558_FW, num);
 	gsl_start_core(ts->client);
 	msleep(200);
 	for (i = 0; i < 3; i++) {
@@ -1728,20 +1407,16 @@ identify_tp_repeat:
 		tmp4 += tmp0 * GSL_C;
 		print_info("[TP-GSL] tmp4 = %d\n", tmp4);
 
-		if (0xffffffff == GSL_CHIP_1)
-		{
+		if (0xffffffff == GSL_CHIP_1) {
 			tmp1 = 0xffff;
 		}
-		if (0xffffffff == GSL_CHIP_2)
-		{
+		if (0xffffffff == GSL_CHIP_2) {
 			tmp2 = 0xffff;
 		}
-		if (0xffffffff == GSL_CHIP_3)
-		{
+		if (0xffffffff == GSL_CHIP_3) {
 			tmp3 = 0xffff;
 		}
-		if (0xffffffff == GSL_CHIP_4)
-		{
+		if (0xffffffff == GSL_CHIP_4) {
 			tmp4 = 0xffff;
 		}
 		print_info("[TP-GSL] tmp1 = %d\n", tmp1);
@@ -1779,7 +1454,6 @@ identify_tp_repeat:
 }
 #endif
 
-
 #ifdef CONFIG_OF_TOUCH
 static irqreturn_t tpd_eint_interrupt_handler(unsigned irq, struct irq_desc *desc);
 #else
@@ -1799,9 +1473,7 @@ static irqreturn_t tpd_eint_interrupt_handler(unsigned irq, struct irq_desc *des
 	wake_up_interruptible(&waiter);
 	return IRQ_HANDLED;
 }
-
 #else
-
 static void tpd_eint_interrupt_handler(void)
 {
 	tpd_flag = 1;
@@ -1821,13 +1493,6 @@ static void gsl_hw_init(void)
 	ret = regulator_enable(tpd->reg);   /* enable regulator */
 	if (ret)
 		printk("regulator_enable() failed!\n");
-
-#ifdef TPD_POWER_VTP28_USE_VCAMA
-	pmic_set_register_value(PMIC_RG_VCAMA_EN, 1);
-	pmic_set_register_value(PMIC_RG_VCAMA_VOSEL, 0x03); //1.8
-#else
-	hwPowerOn(MT6328_POWER_LDO_VGP1, VOL_2800, "TP");
-#endif
 
 	tpd_gpio_as_int(GTP_RST_PORT);
 	tpd_gpio_output(GTP_RST_PORT, 0);
@@ -1883,7 +1548,7 @@ static int  gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct hwmsen_object obj_ps;
 #endif
 	struct device_node *node = NULL; //crystal
-	client->timing = 400; //add by litianfeng 20160106
+	//client->timing = 400; //add by litianfeng 20160106
 	input_set_abs_params(tpd->dev, ABS_MT_TRACKING_ID, 0, (MAX_CONTACTS + 1), 0, 0); //add by sky [2015.11.30]
 
 	print_info();
@@ -1895,6 +1560,10 @@ static int  gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	mutex_init(&gsl_i2c_lock);
 	ddata->client = client;
+	if (ddata->client->addr != 0x40) {
+		print_info("changing ddata->client->addr to 0x40\n");
+		ddata->client->addr = 0x40;
+	}
 	print_info("ddata->client->addr = 0x%x \n", ddata->client->addr);
 	gsl_hw_init();
 #ifdef CONFIG_OF_TOUCH
@@ -2339,4 +2008,3 @@ static void __exit gsl_driver_exit(void)
 
 module_init(gsl_driver_init);
 module_exit(gsl_driver_exit);
-

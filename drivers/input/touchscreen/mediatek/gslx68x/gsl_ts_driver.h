@@ -1,6 +1,6 @@
 #ifndef __GSL_TS_DRIVER_H__
 #define __GSL_TS_DRIVER_H__
-/*********************************/
+
 #define TPD_HAVE_BUTTON		//按键宏
 #define GSL_ALG_ID			//有没有id算法
 #define GSL_COMPATIBLE_CHIP	//芯片兼容宏
@@ -11,9 +11,6 @@
 
 #define GSL_TIMER			//定时器宏
 //#define TPD_PROXIMITY		//距离传感器宏
-#define GSL_DRV_WIRE_IDT_TP	//驱动线兼容
-
-
 
 
 #define GSL9XX_VDDIO_1800    0
@@ -66,12 +63,8 @@ struct fw_data
 	u32 : 0;
 	u32 val;
 };
-#ifdef GSL_DRV_WIRE_IDT_TP
-#include "gsl_idt_zirong_fw.h"
-#endif
 
-#include "gsl_ts_fw.h"
-
+#include "gslx680_c558_fw.h"
 
 static unsigned char gsl_cfg_index = 0;
 
@@ -83,18 +76,10 @@ struct fw_config_type
 	unsigned int data_size;
 };
 static struct fw_config_type gsl_cfg_table[9] = {
-	/*0*/{
-		GSLX680_FW_DC, (sizeof(GSLX680_FW_DC) / sizeof(struct fw_data)),
-		gsl_config_data_id_dc, (sizeof(gsl_config_data_id_dc) / 4)
-	},
-	/*1*/{
-		GSLX680_FW_QK, (sizeof(GSLX680_FW_QK) / sizeof(struct fw_data)),
-		gsl_config_data_id_qk, (sizeof(gsl_config_data_id_qk) / 4)
-	},
-	/*2*/{
-		GSLX680_FW_MWD, (sizeof(GSLX680_FW_MWD) / sizeof(struct fw_data)),
-		gsl_config_data_id_mwd, (sizeof(gsl_config_data_id_mwd) / 4)
-	},
+	{
+		GSLX680_C558_FW, (sizeof(GSLX680_C558_FW) / sizeof(struct fw_data)),
+		gsl_config_data_id_c558, (sizeof(gsl_config_data_id_c558) / sizeof(unsigned int))
+	}
 };
 
 #endif
