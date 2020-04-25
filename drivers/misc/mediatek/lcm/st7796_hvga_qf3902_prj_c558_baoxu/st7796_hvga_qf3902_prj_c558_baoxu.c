@@ -41,9 +41,8 @@ struct LCM_setting_table {
 #define MIN_ID_VOLTAGE 1400
 
 static struct LCM_setting_table lcm_initialization_setting[] = {
-	{REGFLAG_DELAY, 120, {}},
 	{0x11, 0, {0x00}},
-	{REGFLAG_DELAY, 120, {}},
+	{REGFLAG_DELAY, 5, {}},
 	{0xF0, 1, {0xC3}},
 	{0xF0, 1, {0x96}},
 	{0x36, 1, {0x48}},
@@ -57,38 +56,31 @@ static struct LCM_setting_table lcm_initialization_setting[] = {
 	{0xE1, 14, {0xF0, 0x00, 0x03, 0x08, 0x0A, 0x26, 0x37, 0x44, 0x4C, 0x0D, 0x1C, 0x1B, 0x1D, 0x20}},
 	{0xF0, 1, {0x3C}},
 	{0xF0, 1, {0x69}},
-	{REGFLAG_DELAY, 10, {}},
 	{0x29, 1, {0x00}},
-	{REGFLAG_DELAY, 100, {}},
+	{REGFLAG_DELAY, 10, {}},
 	{REGFLAG_END_OF_TABLE, 0x00, {}}
 };
 
-#if 0
 static struct LCM_setting_table lcm_sleep_out_setting[] = {
 	// Sleep Out
-	{REGFLAG_DELAY, 120, {}},
 	{0x11, 0, {0x00}},
-	{REGFLAG_DELAY, 120, {}},
+	{REGFLAG_DELAY, 5, {}},
 
-	// Display ON
+	// Display On
 	{0x29, 0, {0x00}},
-	{REGFLAG_DELAY, 120, {}},
-
+	{REGFLAG_DELAY, 10, {}},
 	{REGFLAG_END_OF_TABLE, 0x00, {}}
 };
 
 static struct LCM_setting_table lcm_sleep_in_setting[] = {
-	// Display off sequence
+	// Display Off
 	{0x28, 0, {0x00}},
-	{REGFLAG_DELAY, 120, {}},
 
-	// Sleep Mode On
+	// Sleep In
 	{0x10, 0, {0x00}},
-	{REGFLAG_DELAY, 120, {}},
-
+	{REGFLAG_DELAY, 5, {}},
 	{REGFLAG_END_OF_TABLE, 0x00, {}}
 };
-#endif
 
 static void push_table(struct LCM_setting_table *table, unsigned int count, unsigned char force_update)
 {
@@ -155,17 +147,12 @@ static void lcm_init(void)
 
 static void lcm_suspend(void)
 {
-	//push_table(lcm_sleep_in_setting, sizeof(lcm_sleep_in_setting) / sizeof(struct LCM_setting_table), 1);
-	SET_RESET_PIN(0);
-	MDELAY(120);
-	SET_RESET_PIN(1);
-	MDELAY(120);
+	push_table(lcm_sleep_in_setting, sizeof(lcm_sleep_in_setting) / sizeof(struct LCM_setting_table), 1);
 }
 
 static void lcm_resume(void)
 {
-	//push_table(lcm_sleep_out_setting, sizeof(lcm_sleep_out_setting) / sizeof(struct LCM_setting_table), 1);
-	lcm_init();
+	push_table(lcm_sleep_out_setting, sizeof(lcm_sleep_out_setting) / sizeof(struct LCM_setting_table), 1);
 }
 
 static unsigned int lcm_compare_id(void)
