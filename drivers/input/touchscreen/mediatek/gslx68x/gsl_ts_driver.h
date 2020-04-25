@@ -2,8 +2,6 @@
 #define __GSL_TS_DRIVER_H__
 
 #define GSL_ALG_ID
-#define GSL_COMPATIBLE_CHIP
-#define GSL_THREAD_EINT
 //#define TPD_PROC_DEBUG
 #define GSL_TIMER
 
@@ -13,19 +11,19 @@
 #define GSL_PAGE_REG 0xf0
 #define GSL_CLOCK_REG 0xe4
 #define GSL_START_REG 0xe0
-#define POWE_FAIL_REG 0xbc
+#define POWER_FAIL_REG 0xbc
 #define TOUCH_INFO_REG 0x80
 #define TPD_DEBUG_TIME 0x20130424
 
 #define GSL_CHIP_NAME "gslx68x"
 #define GSL_DEV_NAME "gsl1680"
-#define MAX_CONTACTS 10	//add by sky[2015.11.30]
+#define MAX_CONTACTS 10
 
 struct gsl_touch_info {
-	int x[10];
-	int y[10];
-	int id[10];
-	int finger_num;
+	int x[MAX_CONTACTS];
+	int y[MAX_CONTACTS];
+	int id[MAX_CONTACTS];
+	unsigned char finger_num;
 };
 
 #ifdef GSL_ALG_ID

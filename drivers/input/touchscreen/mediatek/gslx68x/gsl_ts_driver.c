@@ -37,7 +37,6 @@ static const struct of_device_id tpd_of_match[] = {
 	{.compatible = "mediatek,cap_touch"},
 	{},
 };
-static int gsl_ps_enable = 0;
 static DECLARE_WAIT_QUEUE_HEAD(waiter);
 static struct task_struct *thread = NULL;
 static int tpd_flag = 0;
@@ -69,7 +68,7 @@ static int gsl_read_interface(struct i2c_client *client, unsigned char reg, unsi
 	unsigned char temp = reg;
 
 	mutex_lock(&gsl_i2c_lock);
-	if (temp < 0x80) {
+	if (temp < TOUCH_INFO_REG) {
 		temp = (temp + 8) & 0x5c;
 		i2c_master_send(client, &temp, 1);
 		received += i2c_master_recv(client, &buf[0], 4);
@@ -91,7 +90,7 @@ static int gsl_read_interface(struct i2c_client *client, unsigned char reg, unsi
 	return received;
 }
 
-static int gsl_write_interface(struct i2c_client *client, const unsigned char reg, unsigned char *buf, unsigned int num)
+static int gsl_write_interface(struct i2c_client *client, unsigned char reg, unsigned char *buf, unsigned int num)
 {
 	struct i2c_msg xfer_msg = {0}; //modify crystal
 	int ret;
@@ -139,7 +138,7 @@ static void gsl_io_control(struct i2c_client *client)
 		buf[1] = 0;
 		buf[2] = 0xfe;
 		buf[3] = 0x1;
-		gsl_write_interface(client, 0xf0, buf, 4);
+		gsl_write_interface(client, GSL_PAGE_REG, buf, 4);
 
 		buf[0] = 0x5;
 		buf[1] = 0;
@@ -162,7 +161,7 @@ static void gsl_start_core(struct i2c_client *client)
 	buf[2] = 0xfe;
 	buf[1] = 0x0e;
 	buf[0] = 0x02;
-	gsl_write_interface(client, 0xf0, buf, 4);
+	gsl_write_interface(client, GSL_PAGE_REG, buf, 4);
 
 	buf[3] = 0x00;
 	buf[2] = 0x0a;
@@ -175,7 +174,7 @@ static void gsl_start_core(struct i2c_client *client)
 	gsl_write_interface(client, 0x88, buf, 4);
 
 	buf[0] = 0x00;
-	gsl_write_interface(client, 0xe0, buf, 4);
+	gsl_write_interface(client, GSL_START_REG, buf, 4);
 
 #ifdef GSL_ALG_ID
 	gsl_DataInit(GSL_CONFIG_DATA_ID);
@@ -187,15 +186,15 @@ static void gsl_reset_core(struct i2c_client *client)
 	unsigned char buf[4] = {0x00};
 
 	buf[0] = 0x88;
-	gsl_write_interface(client, 0xe0, buf, 4);
+	gsl_write_interface(client, GSL_START_REG, buf, 4);
 	msleep(5);
 
 	buf[0] = 0x04;
-	gsl_write_interface(client, 0xe4, buf, 4);
+	gsl_write_interface(client, GSL_CLOCK_REG, buf, 4);
 	msleep(5);
 
 	buf[0] = 0x00;
-	gsl_write_interface(client, 0xbc, buf, 4);
+	gsl_write_interface(client, POWER_FAIL_REG, buf, 4);
 	msleep(5);
 
 #if GSL9XX_VDDIO_1800
@@ -206,39 +205,39 @@ static void gsl_reset_core(struct i2c_client *client)
 static void gsl_clear_reg(struct i2c_client *client)
 {
 	unsigned char buf[4] = {0};
-	
+
 	//clear reg
 	buf[0] = 0x88;
-	gsl_write_interface(client, 0xe0, buf, 4);
+	gsl_write_interface(client, GSL_START_REG, buf, 4);
 	msleep(20);
 
 	buf[0] = 0x03;
-	gsl_write_interface(client, 0x80, buf, 4);
+	gsl_write_interface(client, TOUCH_INFO_REG, buf, 4);
 	msleep(5);
 
 	buf[0] = 0x04;
-	gsl_write_interface(client, 0xe4, buf, 4);
+	gsl_write_interface(client, GSL_CLOCK_REG, buf, 4);
 	msleep(5);
 
 	buf[0] = 0x00;
-	gsl_write_interface(client, 0xe0, buf, 4);
+	gsl_write_interface(client, GSL_START_REG, buf, 4);
 	msleep(20);
 	//clear reg
 }
 
-static void gsl_load_fw(struct i2c_client *client, const struct fw_data *GSL_DOWNLOAD_DATA, int data_len)
+static void gsl_load_fw(struct i2c_client *client, const struct fw_data *data, int data_len)
 {
 	unsigned char buf[4] = {0};
 	unsigned char addr = 0;
 	unsigned int source_line = 0;
-	unsigned int source_len = data_len;//ARRAY_SIZE(GSL_DOWNLOAD_DATA);
+	unsigned int source_len = data_len;
 
 	GSL_LOGD("=============gsl_load_fw start==============\n");
 
 	for (source_line = 0; source_line < source_len; source_line++) {
 		/* init page trans, set the page val */
-		addr = (unsigned char)GSL_DOWNLOAD_DATA[source_line].offset;
-		memcpy(buf, &GSL_DOWNLOAD_DATA[source_line].val, 4);
+		addr = (unsigned char)data[source_line].offset;
+		memcpy(buf, &data[source_line].val, 4);
 		gsl_write_interface(client, addr, buf, 4);
 	}
 
@@ -250,9 +249,11 @@ static void gsl_sw_init(struct i2c_client *client)
 	int temp;
 	char write_buf[4] ;
 	char read_buf[4] = {0};
-	static volatile int gsl_sw_flag = 0;
-	if (1 == gsl_sw_flag)
+	static int gsl_sw_flag = 0;
+
+	if (gsl_sw_flag == 1)
 		return;
+
 	gsl_sw_flag = 1;
 
 	tpd_gpio_output(GTP_RST_PORT, 0);
@@ -286,7 +287,7 @@ static void gsl_sw_init(struct i2c_client *client)
 	write_buf[2] = 0;
 	write_buf[1] = 0;
 	write_buf[0] = 0xb6;
-	gsl_write_interface(client, 0xf0, write_buf, 4);
+	gsl_write_interface(client, GSL_PAGE_REG, write_buf, 4);
 	gsl_read_interface(client, 0x7c, read_buf, 4);
 	GSL_LOGD("[gsl1680][%s] addr = (b6,7c); read_buf = %02x%02x%02x%02x\n",
 	         __func__, read_buf[3], read_buf[2], read_buf[1], read_buf[0]);
@@ -319,7 +320,7 @@ static int gsl_read_MorePage(struct i2c_client *client, unsigned int addr, unsig
 		tmp_buf[1] = (char)(((addr + i * 8) / 0x80) >> 8);
 		tmp_buf[2] = (char)(((addr + i * 8) / 0x80) >> 16);
 		tmp_buf[3] = (char)(((addr + i * 8) / 0x80) >> 24);
-		gsl_write_interface(client, 0xf0, tmp_buf, 4);
+		gsl_write_interface(client, GSL_PAGE_REG, tmp_buf, 4);
 		tmp_addr = (char)((addr + i * 8) % 0x80);
 		gsl_read_interface(client, tmp_addr, (buf + i * 8), 8);
 	}
@@ -328,7 +329,7 @@ static int gsl_read_MorePage(struct i2c_client *client, unsigned int addr, unsig
 		tmp_buf[1] = (char)(((addr + i * 8) / 0x80) >> 8);
 		tmp_buf[2] = (char)(((addr + i * 8) / 0x80) >> 16);
 		tmp_buf[3] = (char)(((addr + i * 8) / 0x80) >> 24);
-		gsl_write_interface(client, 0xf0, tmp_buf, 4);
+		gsl_write_interface(client, GSL_PAGE_REG, tmp_buf, 4);
 		tmp_addr = (char)((addr + i * 8) % 0x80);
 		gsl_read_interface(client, tmp_addr, (buf + i * 8), 4);
 	}
@@ -365,7 +366,7 @@ static int gsl_config_read_proc(struct seq_file *m, void *v)
 				seq_printf(m, "%d\n", GSL_CONFIG_DATA_ID[tmp]);
 #endif
 		} else {
-			gsl_write_interface(gsl_client, 0xf0, &gsl_data_proc[4], 4);
+			gsl_write_interface(gsl_client, GSL_PAGE_REG, &gsl_data_proc[4], 4);
 			gsl_read_interface(gsl_client, gsl_data_proc[0], temp_data, 4);
 			seq_printf(m, "offset : {0x%02x,0x", gsl_data_proc[0]);
 			seq_printf(m, "%02x", temp_data[3]);
@@ -480,7 +481,7 @@ static ssize_t  gsl_config_write_proc(struct file *file, const char __user  *buf
 			buf[2] = (char)(((tmp1 / 0x80) >> 16) & 0xff);
 			buf[3] = (char)(((tmp1 / 0x80) >> 24) & 0xff);
 			buf[4] = (char)(tmp1 % 0x80);
-			gsl_write_interface(gsl_client, 0xf0, buf, 4);
+			gsl_write_interface(gsl_client, GSL_PAGE_REG, buf, 4);
 			gsl_write_interface(gsl_client, buf[4], &path_buf[10], tmp);
 		} else if (3 == path_buf[3] || 4 == path_buf[3]) {
 			memcpy(gsl_read, temp_buf, 4);
@@ -544,9 +545,9 @@ static void gsl_timer_check_func(struct work_struct *work)
 		goto queue_monitor_work;
 	}
 
-	/*check 0xbc register,check dac if normal*/
+	/*check POWER_FAIL_REG register,check dac if normal*/
 	for (i = 0; i < 5; i++) {
-		gsl_read_interface(gsl_client, 0xbc, read_buf, 4);
+		gsl_read_interface(gsl_client, POWER_FAIL_REG, read_buf, 4);
 		if (read_buf[3] != 0 || read_buf[2] != 0 ||
 		    read_buf[1] != 0 || read_buf[0] != 0) {
 			flag = 1;
@@ -567,11 +568,10 @@ queue_monitor_work:
 		memset(int_1st, 0xff, sizeof(int_1st));
 	}
 
-	if (gsl_halt_flag == 0) {
+	if (gsl_halt_flag == 0)
 		queue_delayed_work(gsl_timer_workqueue, &gsl_timer_check_work, 200);
-	}
-	i2c_lock_flag = 0;
 
+	i2c_lock_flag = 0;
 }
 #endif
 
@@ -615,14 +615,14 @@ static void gsl_report_point(struct gsl_touch_info *ti)
 static void gsl_report_work(void)
 {
 	unsigned char buf[4] = {0};
-	//unsigned char i = 0;
-	//unsigned short ret = 0;
-	unsigned short tmp = 0;
-	int tmp1 = 0; //modify
+	unsigned char tmp = 0;
+#ifdef GSL_ALG_ID
+	int tmp1 = 0;
+#endif
 	struct gsl_touch_info cinfo = {{0}};
-	unsigned char tmp_buf[44] = {0};
+	unsigned char tmp_buf[(MAX_CONTACTS - 1) * 4 + 7] = {0};
 
-	GSL_LOGD("enter gsl_report_work\n");
+	GSL_LOGD();
 
 #ifdef GSL_TIMER
 	if (i2c_lock_flag != 0)
@@ -636,37 +636,40 @@ static void gsl_report_work(void)
 		return;
 #endif
 
-	gsl_read_interface(gsl_client, 0x80, tmp_buf, 8);
+	gsl_read_interface(gsl_client, TOUCH_INFO_REG, tmp_buf, 8);
 	if (tmp_buf[0] >= 2 && tmp_buf[0] <= 10)
 		gsl_read_interface(gsl_client, 0x88, &tmp_buf[8], (tmp_buf[0] * 4 - 4));
-	cinfo.finger_num = tmp_buf[0] & 0x0f;
 
-	GSL_LOGD("tp-gsl  finger_num = %d\n", cinfo.finger_num);
-	for (tmp = 0; tmp < (cinfo.finger_num > 10 ? 10 : cinfo.finger_num); tmp++) {
+	cinfo.finger_num = tmp_buf[0] & 0x0f;
+	GSL_LOGD("finger_num = %d\n", cinfo.finger_num);
+	if (cinfo.finger_num > MAX_CONTACTS)
+		cinfo.finger_num = MAX_CONTACTS;
+
+	for (tmp = 0; tmp < cinfo.finger_num; tmp++) {
 		cinfo.id[tmp] = tmp_buf[tmp * 4 + 7] >> 4;
 		cinfo.y[tmp] = (tmp_buf[tmp * 4 + 4] | ((tmp_buf[tmp * 4 + 5]) << 8));
 		cinfo.x[tmp] = (tmp_buf[tmp * 4 + 6] | ((tmp_buf[tmp * 4 + 7] & 0x0f) << 8));
-		GSL_LOGD("tp-gsl  x = %d y = %d \n", cinfo.x[tmp], cinfo.y[tmp]);
+		GSL_LOGD("x = %d, y = %d\n", cinfo.x[tmp], cinfo.y[tmp]);
 	}
 
 #ifdef GSL_ALG_ID
-	//int tmp1 = 0;
 	cinfo.finger_num = (tmp_buf[3] << 24) | (tmp_buf[2] << 16) | (tmp_buf[1] << 8) | (tmp_buf[0]);
 	gsl_alg_id_main(&cinfo);
 
 	tmp1 = gsl_mask_tiaoping();
-	GSL_LOGD("[tp-gsl] tmp1=%x\n", tmp1);
+	GSL_LOGD("tmp1 = 0x%02x\n", tmp1);
 	if (tmp1 > 0 && tmp1 < 0xffffffff) {
-		buf[0] = 0xa;
-		buf[1] = 0;
-		buf[2] = 0;
-		buf[3] = 0;
-		gsl_write_interface(gsl_client, 0xf0, buf, 4);
+		buf[0] = 0x0a;
+		buf[1] = 0x00;
+		buf[2] = 0x00;
+		buf[3] = 0x00;
+		gsl_write_interface(gsl_client, GSL_PAGE_REG, buf, 4);
+
 		buf[0] = (unsigned char)(tmp1 & 0xff);
 		buf[1] = (unsigned char)((tmp1 >> 8) & 0xff);
 		buf[2] = (unsigned char)((tmp1 >> 16) & 0xff);
 		buf[3] = (unsigned char)((tmp1 >> 24) & 0xff);
-		GSL_LOGD("tmp1=%08x,buf[0]=%02x,buf[1]=%02x,buf[2]=%02x,buf[3]=%02x\n",
+		GSL_LOGD("tmp1 = %08x, buf[0] = %02x, buf[1] = %02x, buf[2] = %02x, buf[3] = %02x\n",
 		         tmp1, buf[0], buf[1], buf[2], buf[3]);
 		gsl_write_interface(gsl_client, 0x8, buf, 4);
 	}
@@ -677,38 +680,38 @@ static void gsl_report_work(void)
 #ifdef GSL_TIMER
 i2c_lock_schedule:
 	i2c_lock_flag = 0;
-
 #endif
 }
 
 static int touch_event_handler(void *unused)
 {
-
 	struct sched_param param = { .sched_priority = 4 };
 	sched_setscheduler(current, SCHED_RR, &param);
-	GSL_LOGD("[tpd-gsl][%s] 6666666666666666666\n", __func__);
-	do {
-		GSL_LOGD("[tpd-gsl][%s] 7777777777777777777777777\n", __func__);
+	GSL_LOGD("touch_event_handler started!\n");
+
+	while (!kthread_should_stop()) {
+		GSL_LOGD("Waiting for interrupt...\n");
+
 		enable_irq(touch_irq);
+
 		set_current_state(TASK_INTERRUPTIBLE);
 		wait_event_interruptible(waiter, tpd_flag != 0);
-		//disable_irq(touch_irq);
-		tpd_flag = 0;
-		TPD_DEBUG_SET_TIME;
 		set_current_state(TASK_RUNNING);
+
+		tpd_flag = 0;
+
 		gsl_report_work();
-	} while (!kthread_should_stop());
+	}
+
 	return 0;
 }
 
-static irqreturn_t tpd_eint_interrupt_handler(unsigned irq, struct irq_desc *desc)
+static irqreturn_t tpd_eint_interrupt_handler(int irq, void *dev_id)
 {
-	//TPD_DEBUG_PRINT_INT;
-
+	GSL_LOGD("Received touch irq!\n");
 	tpd_flag = 1;
 	/* enter EINT handler disable INT, make sure INT is disable when handle touch event including top/bottom half */
 	/* use _nosync to avoid deadlock */
-	GSL_LOGD("[tpd-gsl][%s][%d] cccccccccccccccccccccccccccccc\n", __func__, __LINE__);
 	disable_irq_nosync(touch_irq);
 	wake_up_interruptible(&waiter);
 	return IRQ_HANDLED;
@@ -733,7 +736,6 @@ static void gsl_hw_init(void)
 	msleep(100);
 }
 
-//modify by crystal
 #ifdef TPD_PROC_DEBUG
 static int gsl_server_list_open(struct inode *inode, struct file *file)
 {
@@ -753,7 +755,6 @@ static int gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret;
 	struct device_node *node = NULL;
-	//unsigned char tp_data[4];
 
 	GSL_LOGD();
 
@@ -766,8 +767,8 @@ static int gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		GSL_LOGD("setting gsl_client->addr to 0x%02x\n", GSL_I2C_ADDR);
 		gsl_client->addr = GSL_I2C_ADDR;
 	}
+
 	gsl_hw_init();
-	//disable_irq(touch_irq);
 
 	ret = gsl_test_i2c(gsl_client);
 	if (ret < 0)
@@ -777,42 +778,20 @@ static int gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	msleep(20);
 	check_mem_data(gsl_client);
 
-
-	GSL_LOGD("[tpd-gsl][%s] 111111111111111\n", __func__);
-	thread = kthread_run(touch_event_handler, 0, TPD_DEVICE);
-	if (IS_ERR(thread)) {
-		GSL_LOGD("[tpd-gsl][%s] 222222222222222\n", __func__);
-		//ret = PTR_ERR(thread);
-		//TPD_DMESG(TPD_DEVICE " failed to create kernel thread: %d\n", PTR_ERR(thread));
-	}
-	GSL_LOGD("[tpd-gsl][%s] 3333333333333333\n", __func__);
-
+	GSL_LOGD("Finding touch node...\n");
 	node = of_find_matching_node(NULL, touch_of_match);
-	GSL_LOGD("[tpd-gsl][%s] 4444444444444444\n", __func__);
 	//node = of_find_compatible_node(NULL, NULL, "mediatek,TOUCH-eint");
 	//node = of_find_compatible_node(NULL, NULL, "mediatek,cap_touch");
 	if (node) {
-		GSL_LOGD("[tpd-gsl][%s] 44444444444444445555555555555555\n", __func__);
+		GSL_LOGD("Found touch node!\n");
 		touch_irq = irq_of_parse_and_map(node, 0);
 		ret = request_irq(touch_irq, (irq_handler_t) tpd_eint_interrupt_handler,
 		                  IRQF_TRIGGER_RISING, "touch-eint", NULL);
-		if (ret > 0) {
-			ret = -1;
-			GSL_LOGD("tpd request_irq IRQ LINE NOT AVAILABLE!.");
-
-			/* mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM); */
-//				enable_irq(touch_irq);
-		}
+		if (ret < 0)
+			GSL_LOGE("touch_irq not available! Code: %d!\n", ret);
+	} else {
+		GSL_LOGE("Touch node not found!\n");
 	}
-
-#ifdef GSL_TIMER
-	INIT_DELAYED_WORK(&gsl_timer_check_work, gsl_timer_check_func);
-	gsl_timer_workqueue = create_workqueue("gsl_timer_check");
-
-	queue_delayed_work(gsl_timer_workqueue, &gsl_timer_check_work, GSL_TIMER_CHECK_CIRCLE);
-
-#endif
-	GSL_LOGD("[tpd-gsl][%s] 555555555555555555\n", __func__);
 
 #ifdef TPD_PROC_DEBUG
 	proc_create(GSL_CONFIG_PROC_FILE, 0666, NULL, &gsl_seq_fops);
@@ -825,10 +804,18 @@ static int gsl_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	input_set_abs_params(tpd->dev, ABS_MT_TRACKING_ID, 0, 5, 0, 0);
 
-	GSL_LOGD("[tpd-gsl][%s][%d] bbbbbbbbbbbbbbbbbbbbbbbbbbbb\n", __func__, __LINE__);
-	disable_irq(touch_irq);
-	GSL_LOGD("[tpd-gsl][%s][%d] dddddddddddddddddddddddddddd\n", __func__, __LINE__);
-	enable_irq(touch_irq);
+	GSL_LOGD("Creating touch_event_handler kthread...\n");
+	thread = kthread_run(touch_event_handler, NULL, TPD_DEVICE);
+	if (IS_ERR(thread)) {
+		ret = PTR_ERR(thread);
+		GSL_LOGE("Could not create touch_event_handler kthread: %d\n", ret);
+	}
+
+#ifdef GSL_TIMER
+	INIT_DELAYED_WORK(&gsl_timer_check_work, gsl_timer_check_func);
+	gsl_timer_workqueue = create_workqueue("gsl_timer_check");
+	queue_delayed_work(gsl_timer_workqueue, &gsl_timer_check_work, GSL_TIMER_CHECK_CIRCLE);
+#endif
 
 	tpd_load_status = 1;
 
@@ -842,9 +829,9 @@ Input        : struct i2c_client *client
 Output       : int
 Return Value : static
  *****************************************************************************/
-static int  gsl_remove(struct i2c_client *client)
+static int gsl_remove(struct i2c_client *client)
 {
-	GSL_LOGD("[gsl1680] TPD removed\n");
+	GSL_LOGD();
 	return 0;
 }
 
@@ -857,7 +844,7 @@ struct i2c_board_info *info
 Output       : int
 Return Value : static
  *****************************************************************************/
-static int gsl_detect (struct i2c_client *client, struct i2c_board_info *info)
+static int gsl_detect(struct i2c_client *client, struct i2c_board_info *info)
 {
 	//int error;
 
@@ -926,35 +913,20 @@ static int gsl_local_init(void)
 
 static void gsl_suspend(struct device *h)
 {
-	int tmp;
 	GSL_LOGD();
-	GSL_LOGD("gsl_suspend11111111111111111111\n");
-	GSL_LOGD("gsl_suspend:gsl_ps_enable = %d\n", gsl_ps_enable);
+
+#ifdef TPD_PROC_DEBUG
+	if (gsl_proc_flag == 1)
+		return;
+#endif
 
 #ifdef GSL_TIMER
 	cancel_delayed_work_sync(&gsl_timer_check_work);
 	i2c_lock_flag = 0;
 #endif
 
-	gsl_halt_flag = 1;
-	//version info
-	GSL_LOGD("[tp-gsl]the last time of debug:%x\n", TPD_DEBUG_TIME);
-#ifdef GSL_ALG_ID
-	tmp = gsl_version_id();
-	GSL_LOGD("[tp-gsl]the version of alg_id:%x\n", tmp);
-#endif
-
-	//version info
-#ifdef TPD_PROC_DEBUG
-	if (gsl_proc_flag == 1)
-		return;
-#endif
-
-	GSL_LOGD("[tpd-gsl][%s][%d] cccccccccccccccccccccccccccccc\n", __func__, __LINE__);
 	disable_irq(touch_irq);
-//	gsl_reset_core(gsl_client);
-//	msleep(20);
-	tpd_gpio_output(GTP_RST_PORT, 0);
+	gsl_halt_flag = 1;
 }
 
 static void gsl_resume(struct device *h)
@@ -966,17 +938,11 @@ static void gsl_resume(struct device *h)
 		return;
 #endif
 
-	tpd_gpio_output(GTP_RST_PORT, 1);
-	msleep(20);
-	gsl_reset_core(gsl_client);
-
-	gsl_start_core(gsl_client);
-	check_mem_data(gsl_client);
-	GSL_LOGD("[tpd-gsl][%s][%d] aaaaaaaaaaaaaaaaaaaaaaaaaa\n", __func__, __LINE__);
 	enable_irq(touch_irq);
 
 #ifdef GSL_TIMER
 	queue_delayed_work(gsl_timer_workqueue, &gsl_timer_check_work, GSL_TIMER_CHECK_CIRCLE);
+	i2c_lock_flag = 0;
 #endif
 
 	gsl_halt_flag = 0;
